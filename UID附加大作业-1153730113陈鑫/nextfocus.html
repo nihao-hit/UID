@@ -1,0 +1,205 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<script type="text/javascript">
+var currentFocus = 0;
+var dragable1;
+var inputs;
+var count =1;
+
+var rDrag = {
+  o:null,
+  init:function(o){
+    o.onmousedown = this.start;
+  },
+  start:function(e){
+    var o;
+    e = rDrag.fixEvent(e);
+    e.preventDefault && e.preventDefault();
+    rDrag.o = o = this;
+    o.x = e.clientX - rDrag.o.offsetLeft;
+    o.y = e.clientY - rDrag.o.offsetTop;
+    document.onmousemove = rDrag.move;
+    document.onmouseup = rDrag.end;
+  },
+  move:function(e){
+    e = rDrag.fixEvent(e);
+    var oLeft,oTop;
+    oLeft = e.clientX - rDrag.o.x;
+    oTop = e.clientY - rDrag.o.y;
+    rDrag.o.style.left = oLeft + 'px';
+    rDrag.o.style.top = oTop + 'px';
+  },
+  end:function(e){
+    e = rDrag.fixEvent(e);
+    inputs[rDrag.o.id[rDrag.o.id.length-1]-1].focus();
+    currentFocus = parseInt(rDrag.o.id[rDrag.o.id.length-1]-1);
+    rDrag.o = document.onmousemove = document.onmouseup = null;
+  },
+  fixEvent: function(e){
+      if (!e) {
+        e = window.event;
+        e.target = e.srcElement;
+        e.layerX = e.offsetX;
+        e.layerY = e.offsetY;
+      }
+      return e;
+  }
+}
+//获取光标位置
+function getCursorPosition (ctrl) {
+    var CaretPos = 0;
+    if (document.selection) {
+        ctrl.focus ();
+        var Sel = document.selection.createRange ();
+        Sel.moveStart ('character', -ctrl.value.length);
+        CaretPos = Sel.text.length;
+    }
+
+    else if (ctrl.selectionStart || ctrl.selectionStart == '0')
+        CaretPos = ctrl.selectionStart;
+    return (CaretPos);
+}
+//求出上坐标
+function getyAbsTop(obj){
+  var top = obj.offsetTop;
+  while(obj.offsetParent != null){
+    obj = obj.offsetParent;
+    top += obj.offsetTop;
+  }
+  return top;
+}
+//求出左坐标
+function getyAbsLeft(obj){
+  var l = obj.offsetLeft;
+  while(obj.offsetParent != null){
+    obj = obj.offsetParent;
+    l += obj.offsetLeft;
+  }
+  return l;
+}
+
+function sqr(val){
+  return val*val;
+}
+//以编辑框左上角坐标为坐标，以不同编辑框左上角坐标的距离为距离，寻找选定编辑框应该跳转的上下左右的编辑框。
+function findNextFocus(keyCode){
+  var lefts = new Array();
+  var tops = new Array();
+  for (var i = 0; i <count; i++) {
+    lefts[i] = getyAbsLeft(inputs[i]);
+    tops[i] = getyAbsTop(inputs[i]);
+  }
+
+  if(keyCode==37){//left
+    // alert("left");
+    if(getCursorPosition(inputs[currentFocus]) == 0){
+      var thisLeft = lefts[currentFocus];
+      var nextFocus = currentFocus;
+      var minDis = 0.0;
+      var tmp;
+      for(var i = 0;i<count;i++){
+        if(lefts[i]<thisLeft){
+          tmp = sqr(lefts[i]-lefts[currentFocus])+sqr(tops[i]-tops[currentFocus]);
+          if(minDis==0.0 || minDis>tmp){
+            minDis = tmp;
+            nextFocus = i;
+          }
+        }
+      }
+    }
+  }else if(keyCode==38){//up
+    // alert("up");
+    var nextFocus = currentFocus;
+    var minDis = 0.0;
+    var tmp;
+    for(var i = 0;i<count;i++){
+      if(tops[i]<tops[currentFocus]){
+        tmp = sqr(lefts[i]-lefts[currentFocus])+sqr(tops[i]-tops[currentFocus]);
+        if(minDis==0.0 || minDis>tmp){
+          minDis = tmp;
+          nextFocus = i;
+        }
+      }
+    }
+  }else if(keyCode==39){//right
+    // alert("right");
+    if (getCursorPosition(inputs[currentFocus]) == inputs[currentFocus].value.length){
+      var thisLeft = lefts[currentFocus];
+      var nextFocus = currentFocus;
+      var minDis = 0.0;
+      var tmp;
+      for(var i = 0;i<count;i++){
+        if(lefts[i]>thisLeft){
+          tmp = sqr(lefts[i]-lefts[currentFocus])+sqr(tops[i]-tops[currentFocus]);
+          if(minDis==0.0 || minDis>tmp){
+            minDis = tmp;
+            nextFocus = i;
+          }
+        }
+      }
+    } 
+  }else if(keyCode==40 || keyCode==13){//down or enter
+    // alert("down or enter");
+    var nextFocus = currentFocus;
+    var minDis = 0.0;
+    var tmp;
+    for(var i = 0;i<count;i++){
+      if(tops[i]>tops[currentFocus]){
+        tmp = sqr(lefts[i]-lefts[currentFocus])+sqr(tops[i]-tops[currentFocus]);
+        if(minDis==0.0 || minDis>tmp){
+          minDis = tmp;
+          nextFocus = i;
+        }
+      }
+    }
+  }
+  return nextFocus;
+}
+
+document.onkeydown = function(e)
+{
+  if(e){
+    var nextFocus = findNextFocus(e.keyCode);
+    inputs[nextFocus].focus();
+    currentFocus = nextFocus;
+  }
+}
+
+function addNewChild(){
+  count += 1;
+  var newId = "draggable"+count;
+  var newId2 = "input"+count;
+  var width = Math.random()*140+70;
+  var newChild = document.createElement("div");
+  newChild.id = newId;
+  newChild.style.position = "absolute";
+  newChild.innerHTML = "<span>"+newId2+"</span><input id='"+newId2+"' style='width:"+width+"px'/>";
+  document.body.appendChild(newChild);
+  rDrag.init(newChild);
+  inputs[count-1] = document.getElementById(newId2);
+  return;
+}
+
+window.onload = function(){
+  dragable1 = document.getElementById('draggable1');
+
+  rDrag.init(dragable1);
+
+  inputs = new Array();
+  inputs[0] = document.getElementById("input1");
+  inputs[0].focus();
+}
+
+</script>
+</head>
+<body>
+<div id="draggable1" style="position: absolute">
+  <span>input 1</span><input id="input1"/>
+</div>
+<div>
+  <button onclick="addNewChild()" style="margin-left:400px">添加编辑框</button>
+</div>
+
+</body>
+</html>
